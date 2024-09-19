@@ -146,7 +146,7 @@ if uploaded_files is not None:
     st.subheader("4-1. 수치형 데이터 히스토그램")
 
     numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-    selected_column = st.selectbox("시각화할 수치형 컬럼을 선택하세요:", numeric_columns)
+    selected_column = st.selectbox("시각화할 수치형 컬럼을 선택하세요:", numeric_columns, index=5)
 
     if selected_column:
 
@@ -169,168 +169,226 @@ if uploaded_files is not None:
     st.header("")
     st.header("")
 
-    st.subheader("4-2. 수치형 데이터 산점도")
-    x_axis = st.selectbox("X축 변수 선택:", numeric_columns)
-    y_axis = st.selectbox("Y축 변수 선택:", numeric_columns)
+    # st.subheader("4-2. 수치형 데이터 산점도")
+    # x_axis = st.selectbox("X축 변수 선택:", numeric_columns)
+    # y_axis = st.selectbox("Y축 변수 선택:", numeric_columns)
 
-    if x_axis and y_axis:    
-        fig3, ax3 = plt.subplots()
-        scatter = ax3.scatter(df[x_axis], df[y_axis],  alpha=0.7)
-        ax3.set_xlabel(x_axis)
-        ax3.set_ylabel(y_axis)
-        ax3.set_title(f'{x_axis} vs {y_axis} Scatter plot')
+    # if x_axis and y_axis:    
+    #     fig3, ax3 = plt.subplots()
+    #     scatter = ax3.scatter(df[x_axis], df[y_axis],  alpha=0.7)
+    #     ax3.set_xlabel(x_axis)
+    #     ax3.set_ylabel(y_axis)
+    #     ax3.set_title(f'{x_axis} vs {y_axis} Scatter plot')
 
-        st.pyplot(fig3)
+    #     st.pyplot(fig3)
 
     
     # 변수 줄인다음에 pair plots 그리기
     # fig4 = sns.pairplot(df, palette='coolwarm') #hue= 설정
     # st.pyplot(fig4)
 
-# 공란 띄우기
-st.header("")
-st.header("")
-
-st.header("5. 특정 회사 필터링 후 정보 확인")
-# Form 생성
-with st.form("company_filtering"):
-    st.write("필터링 옵션을 선택하세요:")
-
-    # 고유한 회사 ID 및 회사명 선택
-    company_name = st.selectbox("회사명 선택:", options=[None] + df['company_name'].unique().tolist())
-
-    # 선택한 회사 ID에 따라 고유한 회사명 필터링
-    if company_name is not None:
-        matching_id = df[df['company_name'] == company_name]['company_id'].unique().tolist()
-        maching_warranty_id = df[df['company_name'] == company_name]['warranty_id'].unique().tolist()
-    else:
-        matching_id = df['company_id'].unique().tolist()
-        maching_warranty_id = df['warranty_id'].unique().tolist()
-
-    
-    company_id_all_selected = st.checkbox("모두 선택", value=True)
-
-    # 멀티 선택: "모두 선택"이 체크된 경우 모든 ID를 선택, 아니면 개별 선택 가능
-    if company_id_all_selected:
-        company_id = st.multiselect("회사 ID 선택:", options=matching_id, default=matching_id)
-        warranty_id = st.multiselect("담보물 ID 선택:", options=maching_warranty_id, default=maching_warranty_id)
-    else:
-        company_id = st.multiselect("회사 ID 선택:", options=matching_id)
-        warranty_id = st.multiselect("담보물 ID 선택:", options=maching_warranty_id)
-
-
-    # # 다른 필터링 항목 (필요시 추가 가능)
-    # min_operation = st.slider("6개월 평균 가동률(최소값):", min_value=0, max_value=100, value=50)
-
-    # 폼 제출 버튼
-    submit_button = st.form_submit_button(label="필터 적용")
-
-# 폼 제출 후 필터링된 데이터 표시
-if submit_button:
-    # 조건에 따른 데이터 필터링
-    filtered_df = df.copy()
-    
-    if company_id is not None:
-        filtered_df = filtered_df[filtered_df['company_id'].isin(company_id)]
-    
-    if company_name is not None:
-        filtered_df = filtered_df[filtered_df['company_name']==company_name]
-    
-
-    # 필터링된 데이터 출력
-    # 공란
-    st.header("")
-    st.header("")
-    st.subheader("5-1. 해당 회사 기본 정보")
-    st.header("")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("담보물 개수", str(len(maching_warranty_id))+"개")
-    col2.metric("회사 ID 개수", str(len(company_id))+"개")
-    col3.metric("데이터 최초 수집일", str(filtered_df['date'].min()))
-    col4.metric("데이터 최종 수집일", str(filtered_df['date'].max()))
-
+    # 공란 띄우기
     st.header("")
     st.header("")
 
-    col5, col6, col7, col8 = st.columns(4)
-    col5.metric("평균 가동률", str(round(filtered_df['daily_operation'].mean(),2)))
-    col6.metric("최대 가동률", str(round(filtered_df['daily_operation'].max(),2)))
-    col7.metric("최소 가동률", str(round(filtered_df['daily_operation'].min(),2)))
-    col8.metric("가동률 표준편차", str(round(filtered_df['daily_operation'].std(),2)))
+    st.header("5. 특정 회사 필터링 후 정보 확인")
+    # Form 생성
+    with st.form("company_filtering"):
+        st.write("필터링 옵션을 선택하세요:")
 
+        # 고유한 회사 ID 및 회사명 선택
+        company_name = st.selectbox("회사명 선택:", options=[None] + df['company_name'].unique().tolist(), index=1)
 
-    
+        # 선택한 회사 ID에 따라 고유한 회사명 필터링
+        if company_name is not None:
+            matching_id = df[df['company_name'] == company_name]['company_id'].unique().tolist()
+            maching_warranty_id = df[df['company_name'] == company_name]['warranty_id'].unique().tolist()
+        else:
+            matching_id = df['company_id'].unique().tolist()
+            maching_warranty_id = df['warranty_id'].unique().tolist()
 
-    st.header("")
-    st.header("")
-    st.subheader("5-2. 필터링 결과")
-    st.dataframe(filtered_df)
-
-    st.header("")
-    st.header("")
-    st.subheader("5-3. 가동률 시각화")
-    # Seaborn을 사용한 시계열 플롯 생성
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=filtered_df, x='date', y='daily_operation', hue='warranty_name', marker='o')
-
-
-    # warranty_name 별로 min, max, mean 값 계산
-    filtered_df_grouped = filtered_df.groupby('warranty_name')['daily_operation'].agg(['min', 'max', 'mean', 'std']).reset_index()
-
-    # Matplotlib의 ax 객체를 가져와 추가 라인을 그림
-    ax = plt.gca()
-
-    # warranty_name 별로 min, max, mean 수평선 추가
-    for _, row in filtered_df_grouped.iterrows():
-        warranty = row['warranty_name']
-        # mean 수평선
-        ax.axhline(row['mean'], linestyle='-', color='green', label=f'{warranty} mean', linewidth=2, alpha=0.7)
-
-    # 이상치 필터링: 평균 ± 3 표준편차를 벗어난 값
-    outliers = pd.DataFrame()
-
-    for _, row in filtered_df_grouped.iterrows():
-        mean = row['mean']
-        std = row['std']
-        warranty = row['warranty_name']
         
-        # 이상치 기준
-        upper_limit = mean + 2 * std
-        lower_limit = mean - 2 * std
+        company_id_all_selected = st.checkbox("모두 선택", value=False)
+
+        # 멀티 선택: "모두 선택"이 체크된 경우 모든 ID를 선택, 아니면 개별 선택 가능
+        if company_id_all_selected:
+            company_id = st.multiselect("회사 ID 선택:", options=matching_id, default=matching_id)
+            warranty_id = st.multiselect("담보물 ID 선택:", options=maching_warranty_id, default=maching_warranty_id)
+        else:
+            company_id = st.multiselect("회사 ID 선택:", options=matching_id)
+            warranty_id = st.multiselect("담보물 ID 선택:", options=maching_warranty_id)
+
+
+        # # 다른 필터링 항목 (필요시 추가 가능)
+        # min_operation = st.slider("6개월 평균 가동률(최소값):", min_value=0, max_value=100, value=50)
+
+        # 폼 제출 버튼
+        submit_button = st.form_submit_button(label="필터 적용")
+
+    # 폼 제출 후 필터링된 데이터 표시
+    if submit_button:
+        # 조건에 따른 데이터 필터링
+        filtered_df = df.copy()
         
-        # 이상치 필터링
-        outliers_temp = filtered_df[
-            (filtered_df['warranty_name'] == warranty) &
-            ((filtered_df['daily_operation'] > upper_limit) | (filtered_df['daily_operation'] < lower_limit))
-        ]
+        if company_id is not None:
+            filtered_df = filtered_df[filtered_df['company_id'].isin(company_id)]
         
-        outliers = pd.concat([outliers, outliers_temp])
+        if company_name is not None:
+            filtered_df = filtered_df[filtered_df['company_name']==company_name]
 
-    # 이상치 표시
-    sns.scatterplot(data=outliers, x='date', y='daily_operation', color='red', s=100, label='Outliers(2std)', ax=ax)
+        if warranty_id is not None:
+            filtered_df = filtered_df[filtered_df['warranty_id'].isin(warranty_id)]
+        
 
-    # 범례 중복 제거
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
+        # 필터링된 데이터 출력
+        # 공란
+        st.header("")
+        st.header("")
+        st.subheader("5-1. 해당 회사 기본 정보")
+        st.header("")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("담보물 개수", str(len(maching_warranty_id))+"개")
+        col2.metric("회사 ID 개수", str(len(company_id))+"개")
+        col3.metric("데이터 최초 수집일", str(filtered_df['date'].min()))
+        col4.metric("데이터 최종 수집일", str(filtered_df['date'].max()))
+
+        st.header("")
+        st.header("")
+
+        col5, col6, col7, col8 = st.columns(4)
+        col5.metric("평균 가동률", str(round(filtered_df['daily_operation'].mean(),2)))
+        col6.metric("최대 가동률", str(round(filtered_df['daily_operation'].max(),2)))
+        col7.metric("최소 가동률", str(round(filtered_df['daily_operation'].min(),2)))
+        col8.metric("가동률 표준편차", str(round(filtered_df['daily_operation'].std(),2)))
+
+
+        
+
+        st.header("")
+        st.header("")
+        st.subheader("5-2. 필터링 결과")
+        st.dataframe(filtered_df)
+
+        st.header("")
+        st.header("")
+        st.subheader("5-3. 가동률 시각화")
+        # Seaborn을 사용한 시계열 플롯 생성
+        plt.figure(figsize=(10, 6))
+        sns.lineplot(data=filtered_df, x='date', y='daily_operation', hue='warranty_id', marker='o')
+
+
+        # warranty_name 별로 min, max, mean 값 계산
+
+        if filtered_df['warranty_id'].nunique() == 1:
+            filtered_df_grouped = filtered_df.groupby('warranty_id')['daily_operation'].agg(['min', 'max', 'mean', 'std']).reset_index()
+            # Matplotlib의 ax 객체를 가져와 추가 라인을 그림
+            ax = plt.gca()
+
+            # warranty_name 별로 min, max, mean 수평선 추가
+            for _, row in filtered_df_grouped.iterrows():
+                warranty = row['warranty_id']
+                # mean 수평선
+                ax.axhline(row['mean'], linestyle='-', color='green', label=f'{warranty} mean', linewidth=2, alpha=0.7)
+
+            # 이상치 필터링: 평균 ± 3 표준편차를 벗어난 값
+            outliers = pd.DataFrame()
+
+            for _, row in filtered_df_grouped.iterrows():
+                mean = row['mean']
+                std = row['std']
+                warranty = row['warranty_id']
+                
+                # 이상치 기준
+                upper_limit = mean + 2 * std
+                lower_limit = mean - 2 * std
+                
+                # 이상치 필터링
+                outliers_temp = filtered_df[
+                    (filtered_df['warranty_id'] == warranty) &
+                    ((filtered_df['daily_operation'] > upper_limit) | (filtered_df['daily_operation'] < lower_limit))
+                ]
+                
+                outliers = pd.concat([outliers, outliers_temp])
+
+            # 이상치 표시
+            sns.scatterplot(data=outliers, x='date', y='daily_operation', color='red', s=100, label='Outliers(2std)', ax=ax)
+
+            # 범례 중복 제거
+            handles, labels = ax.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            plt.legend(by_label.values(), by_label.keys())
 
 
 
 
-    # x축 날짜 레이블 자동 조정 (AutoDateLocator & AutoDateFormatter 사용)
-    ax = plt.gca()
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))  # 7일 간격으로 날짜 표시
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+            # x축 날짜 레이블 자동 조정 (AutoDateLocator & AutoDateFormatter 사용)
+            ax = plt.gca()
+            ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))  # 7일 간격으로 날짜 표시
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
 
-    # x축 레이블의 회전 각도 설정
-    plt.xticks(rotation=45, ha='right')
-    # 제목과 축 레이블 설정
-    plt.title("Warranty Daily Operation")
-    plt.xlabel("Date")
-    plt.ylabel("Daily Operation")
+            # x축 레이블의 회전 각도 설정
+            plt.xticks(rotation=45, ha='right')
+            # 제목과 축 레이블 설정
+            plt.title("Warranty Daily Operation")
+            plt.xlabel("Date")
+            plt.ylabel("Daily Operation")
 
-    # Streamlit에서 플롯 출력
-    st.pyplot(plt)
+            # Streamlit에서 플롯 출력
+            st.pyplot(plt)
+
+        elif filtered_df['warranty_id'].nunique() >= 2:
+            for warranty_id, group in filtered_df.groupby('warranty_id'):
+                # 해당 warranty_id에 대한 통계 계산
+                warranty_stats = group.groupby('warranty_id').agg(
+                min=('daily_operation', 'min'),
+                max=('daily_operation', 'max'),
+                mean=('daily_operation', 'mean'),
+                std=('daily_operation', 'std')
+                ).reset_index()
+                
+                # 새로운 figure와 ax 객체를 생성
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # min, max, mean 수평선 추가
+                ax.axhline(warranty_stats['mean'].values[0], linestyle='-', color='green', label=f'{warranty_id} mean', linewidth=2, alpha=0.7)
+
+
+                # 이상치 필터링: 평균 ± 2 표준편차를 벗어난 값
+                mean = warranty_stats['mean'].values[0]
+                std = warranty_stats['std'].values[0]
+                upper_limit = mean + 2 * std
+                lower_limit = mean - 2 * std
+
+                # 해당 warranty_id에 대한 이상치 필터링
+                outliers = group[(group['daily_operation'] > upper_limit) | (group['daily_operation'] < lower_limit)]
+
+                # 원본 데이터 라인 플롯
+                sns.lineplot(data=group, x='date', y='daily_operation', ax=ax, label=f'{warranty_id} daily operation')
+
+                # 이상치 표시
+                if not outliers.empty:
+                    sns.scatterplot(data=outliers, x='date', y='daily_operation', color='red', s=100, label='Outliers(2std)', ax=ax)
+
+                # 범례 중복 제거
+                handles, labels = ax.get_legend_handles_labels()
+                by_label = dict(zip(labels, handles))
+                plt.legend(by_label.values(), by_label.keys())
+
+                # x축 날짜 레이블 자동 조정 (AutoDateLocator & AutoDateFormatter 사용)
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))  # 30일 간격으로 날짜 표시
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+
+                # x축 레이블의 회전 각도 설정
+                plt.xticks(rotation=45, ha='right')
+
+                # 제목과 축 레이블 설정
+                plt.title(f"Warranty Daily Operation for {warranty_id}")
+                plt.xlabel("Date")
+                plt.ylabel("Daily Operation")
+
+                # Streamlit에서 플롯 출력
+                st.pyplot(fig)
+
 
 
 
