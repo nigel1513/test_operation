@@ -19,9 +19,9 @@ plt.rc('font', family='Malgun Gothic')
 
 # 1. 파일 업로드 함수(only csv)
 def read_file(file):
-    if  'csv' in file.name:
-        df = pd.read_csv(file, encoding='UTF-8')
-        df = df.drop(columns='Unnamed: 0')
+    if  'parquet' in file.name:
+        df = pd.read_parquet(file)
+        # df = df.drop(columns='Unnamed: 0')
         st.success('파일업로드 완료', icon="🔥")
     else:
         st.warning("CSV 형식만 지원합니다.")
@@ -100,7 +100,7 @@ st.header("")
 st.header("")
 
 st.header("1. 파일 업로드")
-uploaded_files = st.file_uploader("", type=['csv'])
+uploaded_files = st.file_uploader("", type=['parquet'])
 
 if uploaded_files is not None:
     # 공란 띄우기
