@@ -20,8 +20,8 @@ plt.rc('font', family='Malgun Gothic')
 # 1. 파일 업로드 함수(only csv)
 def read_file(file):
     if  'parquet' in file.name:
-        df = pd.read_parquet(file)
-        # df = df.drop(columns='Unnamed: 0')
+        df = pd.read_csv(file)
+        df = df.drop(columns='Unnamed: 0')
         st.success('파일업로드 완료', icon="🔥")
     else:
         st.warning("CSV 형식만 지원합니다.")
