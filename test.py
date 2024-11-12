@@ -1,397 +1,510 @@
-
-# 라이브러리
-
 import streamlit as st
-
+import plotly.express as px
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.font_manager as fm
 
-import seaborn as sns
 
-import io
-plt.rc('font', family='Malgun Gothic')
-# font_list = [f.name for f in fm.fontManager.ttflist]
-# st.write(font_list)  # 설치된 폰트 확인
+# Set page config
+st.set_page_config(page_title="부도율 예측 알고리즘")
 
-# 함수
 
-# 1. 파일 업로드 함수(only csv)
-def read_file(file):
-    if  'csv' in file.name:
-        df = pd.read_csv(file)
-        df = df.drop(columns='Unnamed: 0')
-        st.success('파일업로드 완료', icon="🔥")
+# 함수 정의
+@st.cache_data
+def load_data(file):
+    if file is not None:
+        df = pd.read_csv(file)  # Assuming it's a CSV file
+        return df
     else:
-        st.warning("CSV 형식만 지원합니다.")
-        
-    return df
+        pass  # Return an empty DataFrame if no file is provided
 
-# 2. df columns 정보 함수
-def create_summary(df):
-    # 통계 요약 정보를 얻습니다.
-    stats = df.describe(include='all').transpose()
+# 
 
-    # 데이터 타입 정보를 얻습니다.
-    data_types = df.dtypes
+def space():
+    st.write("")
 
-    # 결측치 개수를 계산합니다.
-    missing_values = df.isnull().sum()
-
-    # 데이터 정보를 입력합니다.
-    data_description = {
-        "date": "가동률 데이터 수집일",
-        "client_id":"본점 ID", # 추후삭제
-        "client_name":"본점명", # 추후삭제
-        "branch_id":"지점 ID", # 추후삭제
-        "branch_name":"지점명", # 추후삭제
-        "company_id":"(담보물을 등록한) 회사 ID", 
-        "company_name":"(담보물을 등록한) 회사명",
-        "warranty_id":"담보물 ID", 
-        "warranty_name":"담보물명",
-        "model_name_x":"담보물 모델명",
-        "serial_number_x":"담보물 식별 번호",
-        "euid":"C&TECH 장비번호", # 추후삭제
-        "last_battery":"최종 배터리", 
-        "daily_operation":"일 가동률",
-        "monthly_operaiton":"월 가동률(현재일부터 과거 30일 평균)",
-        "is_detach":"탈착 여부",
-        "is_move":"이동 여부 {1:미이동, 2:단거리, 3:장거리}",
-        "is_normal":"정상 여부",
-        "previous_month":"데이터 매칭을 위한 이전 달 계산",
-        "target_ym":"previous_month와 매칭",
-        "model_name_y":"담보물 모델명",
-        "serial_number_y":"담보물 식별 번호",
-        "control_number":"고객대출번호",
-        "move_grade":"(구버전) 이동 등급",
-        "confidence_grade":"(구버전) 신뢰성 등급",
-        "operation_grade":"(구버전) 가동률 등급",
-        "avg_operation_one_month":"(전월 기준) 1개월 평균 가동률",
-        "avg_operation_three_month":"3개월 평균 가동률",
-        "avg_operation_six_month":"6개월 평균 가동률",
-        "move_grade_continous_a":"(이동) A등급 유지 카운트",
-        "confidence_grade_continous_a":"(신뢰성) A등급 유지 카운트",
-        "operation_grade_continous_a":"(가동률) A등급 유지 카운트",
-        "registration_number":"사업자 등록번호",
-        "mobility_new_grade":"(신버전) 이동 등급",
-        "reliability_new_grade":"(신버전) 신뢰성 등급",
-        "operability_new_grade":"(신버전) 가동률 등급",
-        "date_count":"해당 담보물 데이터 수집일 합계"
-        }
-
-    # 위의 정보를 하나의 데이터프레임으로 결합합니다.
-    summary = stats.copy()
-    summary['Data Type'] = data_types
-    summary['Missing Values'] = missing_values
-    summary['description'] = data_description.values()
-
-    # 컬럼 순서를 재배치합니다.
-    cols = ['Data Type', 'Missing Values'] + [col for col in summary.columns if col not in ['Data Type', 'Missing Values', 'Description']]
-    summary = summary[cols]
-
-    return summary
-
-# 시작 부분
-st.title("IBK C&Tech Data Visualization")
-
-# 공란 띄우기
-st.header("")
-st.header("")
-
-st.header("1. 파일 업로드")
-uploaded_files = st.file_uploader("", type=['parquet', 'csv'])
-
-if uploaded_files is not None:
-    # 공란 띄우기
-    st.header("")
-    st.header("")
+st.header("제목작성")
 
 
-    st.header("2. 전체 데이터 확인하기")
-    df = read_file(uploaded_files)
-    df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', yearfirst=True) #.dt.strftime('%y-%m-%d')
-    df['date'] = df['date'].dt.date
-    st.dataframe(df.head(100))
+# 1. 파일 업로드
+uploaded_file = st.file_uploader("")
+
+# Load data if a file is uploaded
+if uploaded_file is not None:
+    df = load_data(uploaded_file)
+    st.success("파일 업로드 완료")
+    space()  
+    space()
+    space()  
+    space() 
+    space()  
+
+
+
+
+    # 정상기업 & 부도기업 카운트
+    taget_value_counts = df['overdue_yn'].value_counts().reset_index()    
+    taget_value_counts["기업형태"] = taget_value_counts["overdue_yn"].map({0: "정상기업", 1: "부도기업"})
+    taget_value_counts_fig = px.bar(
+        taget_value_counts,
+        x="기업형태",
+        y="count",
+        color="기업형태",
+        height=400
+    )
+    taget_value_counts_fig.update_layout(
+        title="1. 정상기업 vs 부도기업 현황",
+        xaxis_title="기업형태",
+        yaxis_title="Count",
+        legend_title="기업형태"
+    )
+    st.plotly_chart(taget_value_counts_fig)
+
+    space() 
+    space()  
+
+ 
+
+    # 정상기업 & 부도기업 업력별 카운트
+    overdue_yn_chmt_dcd_counts = df[['overdue_yn', 'cmht_dcd']].value_counts().reset_index()
+    overdue_yn_chmt_dcd_counts.columns = ['overdue_yn', 'cmht_dcd', 'count']
+    total_counts = overdue_yn_chmt_dcd_counts.groupby('overdue_yn')['count'].transform('sum')
+    overdue_yn_chmt_dcd_counts['proportion'] = overdue_yn_chmt_dcd_counts['count'] / total_counts
+    overdue_yn_chmt_dcd_counts['기업형태'] = overdue_yn_chmt_dcd_counts['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+    overdue_yn_chmt_dcd_counts_fig = px.bar(
+        overdue_yn_chmt_dcd_counts,
+        x='cmht_dcd',
+        y='proportion',
+        color='기업형태',
+        labels={'proportion': 'Proportion', 'cmht_dcd': 'CMHT DCD'},
+        barmode='group',
+        height=400
+    )
+    overdue_yn_chmt_dcd_counts_fig.update_layout(
+        title="2. 정상기업 & 부도기업 업력별 부도현황 비율",
+        xaxis_title="CMHT_DCD",
+        yaxis_title="Proportion",
+        legend_title="기업형태",
+    )
+    overdue_yn_chmt_dcd_counts_fig.update_xaxes(type='category', tickvals=list(range(10)))
+    st.plotly_chart(overdue_yn_chmt_dcd_counts_fig)
+
+    space() 
+    space()  
+
+    overdue_yn_tpbs_clsf_dcd_counts = df[['overdue_yn', 'tpbs_clsf_dcd']].value_counts().reset_index()
+    overdue_yn_tpbs_clsf_dcd_counts.columns = ['overdue_yn', 'tpbs_clsf_dcd', 'count']
+    total_counts = overdue_yn_tpbs_clsf_dcd_counts.groupby('overdue_yn')['count'].transform('sum')
+    overdue_yn_tpbs_clsf_dcd_counts['proportion'] = overdue_yn_tpbs_clsf_dcd_counts['count'] / total_counts
+    overdue_yn_tpbs_clsf_dcd_counts['기업형태'] = overdue_yn_tpbs_clsf_dcd_counts['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+    overdue_yn_tpbs_clsf_dcd_counts_fig = px.bar(
+        overdue_yn_tpbs_clsf_dcd_counts,
+        x='tpbs_clsf_dcd',
+        y='proportion',
+        color='기업형태',
+        labels={'proportion': 'Proportion', 'tpbs_clsf_dcd': 'tpbs_clsf_dcd'},
+        barmode='group',
+        height=400
+    )
+    overdue_yn_tpbs_clsf_dcd_counts_fig.update_layout(
+        title="3. 정상기업 vs 부도기업 산업별 부도현황 비율",
+        xaxis_title="tpbs_clsf_dcd",
+        yaxis_title="Proportion",
+        legend_title="기업형태",
+    )
+    st.plotly_chart(overdue_yn_tpbs_clsf_dcd_counts_fig)
+
+    space() 
+    space() 
+
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+    # Violin Plot with density normalization
+    overdue_yn_op_fig = px.violin(
+        df,
+        x='기업형태',
+        y='avg_daily_operation_med',
+        box=True,
+        points="all",
+        labels={'avg_daily_operation_med': 'Avg Daily Operation (Med)', 'status': 'Status'},
+        title="4-1. 정상기업 & 부도기업 가동률 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    )
+    st.plotly_chart(overdue_yn_op_fig)
+
+    space() 
+    space() 
+
+    # Violin Plot with tpbs_clsf_dcd as color
+    industry_op_fig_violin = px.violin(
+        df,
+        x='기업형태',
+        y='avg_daily_operation_med',
+        color='tpbs_clsf_dcd',  # Add tpbs_clsf_dcd as color
+        box=True,
+        points="all",
+        labels={'avg_daily_operation_med_mean_tpbs_clsf_dcd': 'Avg industry Daily Operation (Med)', 'status': 'Status'},
+        title="4-2. 정상기업 vs 부도기업 산업별 가동률 현황",
+        height=400,
+    )
+    # Set all traces to legend-only (initially hidden)
+    industry_op_fig_violin.for_each_trace(lambda trace: trace.update(visible="legendonly"))
+
+    # Manually set a specific tpbs_clsf_dcd value to be visible (e.g., "A")
+    for trace in industry_op_fig_violin.data:
+        if trace.name == df['tpbs_clsf_dcd'].unique()[0]:  
+            trace.visible = True
+    st.plotly_chart(industry_op_fig_violin)
+
+    space() 
+    space() 
+
+    op_fig_hist = px.histogram(
+    df,
+    x='avg_daily_operation_med',
+    color='기업형태',
+    histnorm='percent',
+    labels={'avg_daily_operation_med': 'Avg Daily Operation (Med)', 'status': 'Status'},
+    title="4-3. 정상기업 vs 부도기업 가동률 히스토그램",
+    barmode='overlay',
+    height=400,
+    color_discrete_map={'정상기업': 'steelblue', '부도기업': 'coral'} 
+    )
+    st.plotly_chart(op_fig_hist)
     
-    # 공란 띄우기
-    st.header("")
-    st.header("")
-
-    st.header("3. 데이터 기본정보")
-    summary_df = create_summary(df)    
-    st.dataframe(summary_df)
-
-                 
-    # 각 컬럼에 대한 속성 정보를 표시
-    attribute_infos = ""
-    for idx, row in summary_df.iterrows():
-        attribute_info = f"""
-        **컬럼명:** {idx}
-        - **설명:** {row['description']}
-        - **예시 값:** {df[idx].dropna().unique()[:2]}
-        ---
-        """
-        attribute_infos += attribute_info + "\n"
-
-    with st.expander("🔍 컬럼 상세 설명"):
-        st.info(attribute_infos)
+    space() 
+    space() 
 
 
-    # 공란 띄우기
-    st.header("")
-    st.header("")
-    # 사용자로부터 컬럼 선택받기
-    st.header("4. 데이터 시각화")
-    st.subheader("4-1. 수치형 데이터 히스토그램")
+    # Histogram with tpbs_clsf_dcd as color
+    # Create a combined column for color mapping
+    df['industry_tpbs'] = df['기업형태'] + " - " + df['tpbs_clsf_dcd']
+    sorted_industry_tpbs = sorted(df['industry_tpbs'].unique())
 
-    numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-    selected_column = st.selectbox("시각화할 수치형 컬럼을 선택하세요:", numeric_columns, index=5)
 
-    if selected_column:
+    # Histogram with 기업형태_tpbs as color
+    industry_op_fig_hist = px.histogram(
+        df,
+        x='avg_daily_operation_med',
+        color='industry_tpbs',  # Use the combined column as color
+        histnorm='percent',
+        labels={'avg_daily_operation_med': 'Avg Daily Operation (Med)', 'status': 'Status'},
+        title="4-4. 정상기업 vs 부도기업 산업별 가동률 히스토그램",
+        barmode='overlay',
+        height=400,
+        category_orders={'industry_tpbs': sorted_industry_tpbs}
+        )
 
-        # 히스토그램 그리기
-        fig, ax = plt.subplots()
-        ax.hist(df[selected_column].dropna(), bins=30, color='skyblue', edgecolor='black')
-        ax.set_title(f'{selected_column} hist')
-        ax.set_xlabel(selected_column)
-        ax.set_ylabel('frequency')
-        st.pyplot(fig)
+    # Set all traces to legend-only (initially hidden)
+    industry_op_fig_hist.for_each_trace(lambda trace: trace.update(visible="legendonly"))
 
-        # 박스플롯 그리기
-        fig2, ax2 = plt.subplots()
-        ax2.boxplot(df[selected_column].dropna())
-        ax2.set_title(f'{selected_column} boxplot')
-        ax2.set_ylabel(selected_column)
-        st.pyplot(fig2)
+    # Get the first unique value from `기업형태_tpbs` and set it to be visible
+    first_value = df['industry_tpbs'].unique()[0]
+    for trace in industry_op_fig_hist.data:
+        if trace.name == first_value:
+            trace.visible = True
+
+    st.plotly_chart(industry_op_fig_hist)
     
-    # 공란 띄우기
-    st.header("")
-    st.header("")
+    space() 
+    space()         
 
-    # st.subheader("4-2. 수치형 데이터 산점도")
-    # x_axis = st.selectbox("X축 변수 선택:", numeric_columns)
-    # y_axis = st.selectbox("Y축 변수 선택:", numeric_columns)
 
-    # if x_axis and y_axis:    
-    #     fig3, ax3 = plt.subplots()
-    #     scatter = ax3.scatter(df[x_axis], df[y_axis],  alpha=0.7)
-    #     ax3.set_xlabel(x_axis)
-    #     ax3.set_ylabel(y_axis)
-    #     ax3.set_title(f'{x_axis} vs {y_axis} Scatter plot')
+    overdue_yn_op_fig = px.violin(
+        df,
+        x='기업형태',
+        y='diff_avg_daily_operation_med_tpbs_clsf_dcd',
+        box=True,
+        points="all",
+        labels={'diff_avg_daily_operation_med_tpbs_clsf_dcd': 'Avg Daily Operation (Med)', 'status': 'Status'},
+        title="4-5. 정상기업 vs 부도기업 (Daily 가동률 - daily 산업평균 가동률 평균) 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    )
+    st.plotly_chart(overdue_yn_op_fig)
 
-    #     st.pyplot(fig3)
+    space() 
+    space() 
+   
+    # Violin Plot with tpbs_clsf_dcd as color
+    industry_op_fig_violin = px.violin(
+        df,
+        x='기업형태',
+        y='diff_avg_daily_operation_med_tpbs_clsf_dcd',
+        color='tpbs_clsf_dcd',  # Add tpbs_clsf_dcd as color
+        box=True,
+        points="all",
+        labels={'diff_avg_daily_operation_med_tpbs_clsf_dcd': 'Avg industry Daily Operation (Med)', 'status': 'Status'},
+        title="4-6. 정상기업 vs 부도기업 (Daily 가동률 - daily 산업평균 가동률 평균) 산업별 현황",
+        height=400,
+    )
+    # Set all traces to legend-only (initially hidden)
+    industry_op_fig_violin.for_each_trace(lambda trace: trace.update(visible="legendonly"))
+
+    # Manually set a specific tpbs_clsf_dcd value to be visible (e.g., "A")
+    for trace in industry_op_fig_violin.data:
+        if trace.name == df['tpbs_clsf_dcd'].unique()[0]:  
+            trace.visible = True
+    st.plotly_chart(industry_op_fig_violin)
+
+    space() 
+    space() 
+    
+    
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+
+    avg_daily_op_med_12w_min_fig = px.violin(
+        df,
+        x='기업형태',
+        y='avg_daily_operation_med_12week_min',
+        box=True,
+        points="all",
+        labels={'avg_daily_operation_med_12week_min': 'avg_daily_operation_med_12week_min', 'status': 'Status'},
+        title="avg_daily_operation_med_12week_min",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
+
+    st.plotly_chart(avg_daily_op_med_12w_min_fig)
 
     
-    # 변수 줄인다음에 pair plots 그리기
-    # fig4 = sns.pairplot(df, palette='coolwarm') #hue= 설정
-    # st.pyplot(fig4)
+    space() 
+    space() 
 
-    # 공란 띄우기
-    st.header("")
-    st.header("")
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
 
-    st.header("5. 특정 회사 필터링 후 정보 확인")
-    # Form 생성
-    with st.form("company_filtering"):
-        st.write("필터링 옵션을 선택하세요:")
+    #'diff_avg_operation_three_month_med_mean_tpbs_clsf_dcd_4week_std',
+    #'diff_avg_operation_six_month_med_mean_tpbs_clsf_dcd_4week_std',
 
-        # 고유한 회사 ID 및 회사명 선택
-        company_name = st.selectbox("회사명 선택:", options=[None] + df['company_name'].unique().tolist(), index=1)
+    avg_daily_op_6m_med_4w_std_fig = px.violin(
+        df,
+        x='기업형태',
+        y='avg_operation_six_month_med_4week_std',
+        box=True,
+        points="all",
+        labels={'avg_operation_six_month_med_4week_std': 'avg_operation_six_month_med_4week_std', 'status': 'Status'},
+        title="avg_daily_op_6m_med_4w_std_fig",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
 
-        # 선택한 회사 ID에 따라 고유한 회사명 필터링
-        if company_name is not None:
-            matching_id = df[df['company_name'] == company_name]['company_id'].unique().tolist()
-            maching_warranty_id = df[df['company_name'] == company_name]['warranty_id'].unique().tolist()
-        else:
-            matching_id = df['company_id'].unique().tolist()
-            maching_warranty_id = df['warranty_id'].unique().tolist()
+    st.plotly_chart(avg_daily_op_6m_med_4w_std_fig)
+
+    
+    space() 
+    space() 
+
+
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+
+    diff_avg_daily_op_med_4w_std_fig = px.violin(
+        df,
+        x='기업형태',
+        y='diff_avg_operation_one_month_med_mean_tpbs_clsf_dcd_4week_std',
+        box=True,
+        points="all",
+        labels={'diff_avg_operation_one_month_med_mean_tpbs_clsf_dcd_4week_std': 'diff_avg_operation_one_month_med_mean_tpbs_clsf_dcd_4week_std', 'status': 'Status'},
+        title="diff_avg_operation_one_month_med_mean_tpbs_clsf_dcd_4week_std",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
+
+    st.plotly_chart(diff_avg_daily_op_med_4w_std_fig)
+
+    
+    space() 
+    space() 
+
+
+
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+    # Violin Plot with density normalization
+    overdue_yn_fcfn_bal_fig = px.violin(
+        df,
+        x='기업형태',
+        y='fcfn_bal',
+        box=True,
+        points="all",
+        labels={'fcfn_bal': 'Avg fcfn_bal', 'status': 'Status'},
+        title="4-7. 정상기업 & 부도기업 Daily Avg 시설자금잔액 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
+
+    st.plotly_chart(overdue_yn_fcfn_bal_fig)
+
+    
+    space() 
+    space() 
+
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+    # Violin Plot with density normalization
+    overdue_yn_fcfn_bal_4w_fig = px.violin(
+        df,
+        x='기업형태',
+        y='fcfn_bal_4week_min',
+        box=True,
+        points="all",
+        labels={'fcfn_bal': 'Avg fcfn_bal', 'status': 'Status'},
+        title="4-8. 정상기업 & 부도기업 4_week_min 시설자금잔액 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
+
+    st.plotly_chart(overdue_yn_fcfn_bal_4w_fig)
 
         
-        company_id_all_selected = st.checkbox("모두 선택", value=False)
+    space() 
+    space() 
 
-        # 멀티 선택: "모두 선택"이 체크된 경우 모든 ID를 선택, 아니면 개별 선택 가능
-        if company_id_all_selected:
-            company_id = st.multiselect("회사 ID 선택:", options=matching_id, default=matching_id)
-            warranty_id = st.multiselect("담보물 ID 선택:", options=maching_warranty_id, default=maching_warranty_id)
-        else:
-            company_id = st.multiselect("회사 ID 선택:", options=matching_id)
-            warranty_id = st.multiselect("담보물 ID 선택:", options=maching_warranty_id)
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
 
+    # Violin Plot with density normalization
+    overdue_yn_thmm_todp_avb_fig = px.violin(
+        df,
+        x='기업형태',
+        y='thmm_todp_avb',
+        box=True,
+        points="all",
+        labels={'thmm_todp_avb': 'Avg thmm_todp_avb', 'status': 'Status'},
+        title="4-9. 정상기업 & 부도기업 당월총수신평잔 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
 
-        # # 다른 필터링 항목 (필요시 추가 가능)
-        # min_operation = st.slider("6개월 평균 가동률(최소값):", min_value=0, max_value=100, value=50)
-
-        # 폼 제출 버튼
-        submit_button = st.form_submit_button(label="필터 적용")
-
-    # 폼 제출 후 필터링된 데이터 표시
-    if submit_button:
-        # 조건에 따른 데이터 필터링
-        filtered_df = df.copy()
-        
-        if company_id is not None:
-            filtered_df = filtered_df[filtered_df['company_id'].isin(company_id)]
-        
-        if company_name is not None:
-            filtered_df = filtered_df[filtered_df['company_name']==company_name]
-
-        if warranty_id is not None:
-            filtered_df = filtered_df[filtered_df['warranty_id'].isin(warranty_id)]
-        
-
-        # 필터링된 데이터 출력
-        # 공란
-        st.header("")
-        st.header("")
-        st.subheader("5-1. 해당 회사 기본 정보")
-        st.header("")
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("담보물 개수", str(len(maching_warranty_id))+"개")
-        col2.metric("회사 ID 개수", str(len(company_id))+"개")
-        col3.metric("데이터 최초 수집일", str(filtered_df['date'].min()))
-        col4.metric("데이터 최종 수집일", str(filtered_df['date'].max()))
-
-        st.header("")
-        st.header("")
-
-        col5, col6, col7, col8 = st.columns(4)
-        col5.metric("평균 가동률", str(round(filtered_df['daily_operation'].mean(),2)))
-        col6.metric("최대 가동률", str(round(filtered_df['daily_operation'].max(),2)))
-        col7.metric("최소 가동률", str(round(filtered_df['daily_operation'].min(),2)))
-        col8.metric("가동률 표준편차", str(round(filtered_df['daily_operation'].std(),2)))
+    st.plotly_chart(overdue_yn_thmm_todp_avb_fig)
 
 
-        
+    space() 
+    space() 
 
-        st.header("")
-        st.header("")
-        st.subheader("5-2. 필터링 결과")
-        st.dataframe(filtered_df)
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
 
-        st.header("")
-        st.header("")
-        st.subheader("5-3. 가동률 시각화")
-        # Seaborn을 사용한 시계열 플롯 생성
-        plt.figure(figsize=(10, 6))
-        sns.lineplot(data=filtered_df, x='date', y='daily_operation', hue='warranty_id', marker='o')
+    # Violin Plot with density normalization
+    overdue_yn_thmm_todp_avb_4w_min_fig = px.violin(
+        df,
+        x='기업형태',
+        y='thmm_todp_avb_4week_min',
+        box=True,
+        points="all",
+        labels={'thmm_todp_avb_4week_min': 'thmm_todp_avb_4week_min', 'status': 'Status'},
+        title="4-10. 정상기업 & 부도기업 4주 당월총수신평잔 최소값 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
 
-
-        # warranty_name 별로 min, max, mean 값 계산
-
-        if filtered_df['warranty_id'].nunique() == 1:
-            filtered_df_grouped = filtered_df.groupby('warranty_id')['daily_operation'].agg(['min', 'max', 'mean', 'std']).reset_index()
-            # Matplotlib의 ax 객체를 가져와 추가 라인을 그림
-            ax = plt.gca()
-
-            # warranty_name 별로 min, max, mean 수평선 추가
-            for _, row in filtered_df_grouped.iterrows():
-                warranty = row['warranty_id']
-                # mean 수평선
-                ax.axhline(row['mean'], linestyle='-', color='green', label=f'{warranty} mean', linewidth=2, alpha=0.7)
-
-            # 이상치 필터링: 평균 ± 3 표준편차를 벗어난 값
-            outliers = pd.DataFrame()
-
-            for _, row in filtered_df_grouped.iterrows():
-                mean = row['mean']
-                std = row['std']
-                warranty = row['warranty_id']
-                
-                # 이상치 기준
-                upper_limit = mean + 2 * std
-                lower_limit = mean - 2 * std
-                
-                # 이상치 필터링
-                outliers_temp = filtered_df[
-                    (filtered_df['warranty_id'] == warranty) &
-                    ((filtered_df['daily_operation'] > upper_limit) | (filtered_df['daily_operation'] < lower_limit))
-                ]
-                
-                outliers = pd.concat([outliers, outliers_temp])
-
-            # 이상치 표시
-            sns.scatterplot(data=outliers, x='date', y='daily_operation', color='red', s=100, label='Outliers(2std)', ax=ax)
-
-            # 범례 중복 제거
-            handles, labels = ax.get_legend_handles_labels()
-            by_label = dict(zip(labels, handles))
-            plt.legend(by_label.values(), by_label.keys())
+    st.plotly_chart(overdue_yn_thmm_todp_avb_4w_min_fig)
 
 
 
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
 
-            # x축 날짜 레이블 자동 조정 (AutoDateLocator & AutoDateFormatter 사용)
-            ax = plt.gca()
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))  # 7일 간격으로 날짜 표시
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    # Violin Plot with density normalization
+    overdue_yn_thmm_todp_avb_fig = px.violin(
+        df,
+        x='기업형태',
+        y='thmm_ondm_avb',
+        box=True,
+        points="all",
+        labels={'thmm_ondm_avb': 'Avg thmm_ondm_avb', 'status': 'Status'},
+        title="4-. 정상기업 & 부도기업 당월요구불평잔 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
 
-            # x축 레이블의 회전 각도 설정
-            plt.xticks(rotation=45, ha='right')
-            # 제목과 축 레이블 설정
-            plt.title("Warranty Daily Operation")
-            plt.xlabel("Date")
-            plt.ylabel("Daily Operation")
-
-            # Streamlit에서 플롯 출력
-            st.pyplot(plt)
-
-        elif filtered_df['warranty_id'].nunique() >= 2:
-            for warranty_id, group in filtered_df.groupby('warranty_id'):
-                # 해당 warranty_id에 대한 통계 계산
-                warranty_stats = group.groupby('warranty_id').agg(
-                min=('daily_operation', 'min'),
-                max=('daily_operation', 'max'),
-                mean=('daily_operation', 'mean'),
-                std=('daily_operation', 'std')
-                ).reset_index()
-                
-                # 새로운 figure와 ax 객체를 생성
-                fig, ax = plt.subplots(figsize=(10, 6))
-                
-                # min, max, mean 수평선 추가
-                ax.axhline(warranty_stats['mean'].values[0], linestyle='-', color='green', label=f'{warranty_id} mean', linewidth=2, alpha=0.7)
+    st.plotly_chart(overdue_yn_thmm_todp_avb_fig)
 
 
-                # 이상치 필터링: 평균 ± 2 표준편차를 벗어난 값
-                mean = warranty_stats['mean'].values[0]
-                std = warranty_stats['std'].values[0]
-                upper_limit = mean + 2 * std
-                lower_limit = mean - 2 * std
+    space() 
+    space() 
 
-                # 해당 warranty_id에 대한 이상치 필터링
-                outliers = group[(group['daily_operation'] > upper_limit) | (group['daily_operation'] < lower_limit)]
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
 
-                # 원본 데이터 라인 플롯
-                sns.lineplot(data=group, x='date', y='daily_operation', ax=ax, label=f'{warranty_id} daily operation')
+    # Violin Plot with density normalization
+    overdue_yn_thmm_todp_avb_4w_min_fig = px.violin(
+        df,
+        x='기업형태',
+        y='thmm_ondm_avb_4week_min',
+        box=True,
+        points="all",
+        labels={'thmm_ondm_avb_4week_min': 'thmm_ondm_avb_4week_min', 'status': 'Status'},
+        title="4-. 정상기업 & 부도기업 4주 당월요구불평잔 최소값 현황",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
 
-                # 이상치 표시
-                if not outliers.empty:
-                    sns.scatterplot(data=outliers, x='date', y='daily_operation', color='red', s=100, label='Outliers(2std)', ax=ax)
-
-                # 범례 중복 제거
-                handles, labels = ax.get_legend_handles_labels()
-                by_label = dict(zip(labels, handles))
-                plt.legend(by_label.values(), by_label.keys())
-
-                # x축 날짜 레이블 자동 조정 (AutoDateLocator & AutoDateFormatter 사용)
-                ax.xaxis.set_major_locator(mdates.DayLocator(interval=30))  # 30일 간격으로 날짜 표시
-                ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-
-                # x축 레이블의 회전 각도 설정
-                plt.xticks(rotation=45, ha='right')
-
-                # 제목과 축 레이블 설정
-                plt.title(f"Warranty Daily Operation for {warranty_id}")
-                plt.xlabel("Date")
-                plt.ylabel("Daily Operation")
-
-                # Streamlit에서 플롯 출력
-                st.pyplot(fig)
+    st.plotly_chart(overdue_yn_thmm_todp_avb_4w_min_fig)
 
 
+        # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+    # Violin Plot with density normalization
+    overdue_yn_bhcc06_fig = px.violin(
+        df,
+        x='기업형태',
+        y='bhcc06',
+        box=True,
+        points="all",
+        labels={'bhcc06': 'bhcc06', 'status': 'Status'},
+        title="4-11. 정상기업 & 부도기업 사업체 통신요금 자동이체 정상 출금 기간(현재기준)",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
+
+    st.plotly_chart(overdue_yn_bhcc06_fig)
+
+    # 급여이체여부 sltf_yn
+
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+    # Calculate percentage of sltf_yn = 1 for each 기업형태
+    percent_df = df.groupby('기업형태')['sltf_yn'].mean().reset_index()
+    percent_df['sltf_yn_percent'] = percent_df['sltf_yn'] * 100
+
+    # Bar plot for percentage
+    sltf_yn_fig = px.bar(
+        percent_df,
+        x='기업형태',
+        y='sltf_yn_percent',
+        labels={'sltf_yn_percent': '급여이체여부 (%)'},
+        title="4-12. 정상기업 & 부도기업 급여이체여부 비율 (현재기준)",
+        height=400
+    )
+
+    st.plotly_chart(sltf_yn_fig)
 
 
+    # Map `overdue_yn` to labels
+    df['기업형태'] = df['overdue_yn'].map({0: '정상기업', 1: '부도기업'})
+
+    # Violin Plot with density normalization
+    sltf_yn_12w_violin_fig = px.violin(
+        df,
+        x='기업형태',
+        y='sltf_yn_12week_sum',
+        box=True,
+        points="all",
+        labels={'sltf_yn_12week_sum': 'sltf_yn_12week_sum', 'status': 'Status'},
+        title="4-13. 정상기업 & 부도기업 최근 12주 급여이체 횟수 합계",
+        height=400,  # Normalize by percentage to account for imbalance
+    
+    )
+
+    st.plotly_chart(sltf_yn_12w_violin_fig)
+
+else:
+    pass
 
 
 
