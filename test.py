@@ -21,7 +21,7 @@ def load_data(file):
 def space():
     st.write("")
 
-st.header("제목작성")
+st.header("시각화")
 
 
 # 1. 파일 업로드
