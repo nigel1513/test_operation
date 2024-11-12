@@ -1,5 +1,2 @@
-matplotlib<=3.5.3
-seaborn<=0.12.2
-numpy<=1.22
-distlib
-
+streamlit
+plotly
